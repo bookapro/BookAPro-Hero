@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "Book A Pro Hero",
+    "slug": "book-a-pro-hero",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bookapro.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app needs access to your location to show nearby services and confirm your service location.",
+        "NSLocationAlwaysUsageDescription": "This app needs access to your location to show nearby services and confirm your service location."
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyAHSJ-TUYMhwJkWIMLgdBJ1uPXBh7Ro7FY"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.bookapro.app",
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAHSJ-TUYMhwJkWIMLgdBJ1uPXBh7Ro7FY"
+        }
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
