@@ -1,6 +1,7 @@
 import { ThemedView } from "@/components/common/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Config } from "@/constants/Config";
+import { SERVICE_CATEGORIES } from "@/constants/ServiceCategories";
 import { Colors, FontFamily, Spacing } from "@/constants/Styles";
 import { useAuth } from "@/contexts/AuthContext";
 import { authService } from "@/services/authService";
@@ -12,6 +13,7 @@ import {
   Alert,
   BackHandler,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -27,6 +29,7 @@ export default function LoginScreen() {
   const [step, setStep] = useState<"phone" | "register" | "otp">("phone");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [fullName, setFullName] = useState("");
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isUserRegistered, setIsUserRegistered] = useState<boolean | null>(
     null
@@ -41,25 +44,19 @@ export default function LoginScreen() {
     const backHandler = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
-        // Prevent default back navigation
-        // User must use the UI back arrows to navigate
         console.log(
           "🔒 [LOGIN] Device back button blocked - use UI navigation"
         );
         return true; // Prevent default back behavior
       }
     );
-
     return () => backHandler.remove();
   }, []);
 
   const formatPhoneNumber = (text: string) => {
-    // Remove all non-digits and limit to configured length
     const cleaned = text
       .replace(/\D/g, "")
       .slice(0, Config.PHONE_NUMBER_LENGTH);
-
-    // Format as XXXXX XXXXX (just the digits with space)
     if (cleaned.length >= 5) {
       return `${cleaned.slice(0, 5)} ${cleaned.slice(5)}`;
     }
@@ -67,7 +64,6 @@ export default function LoginScreen() {
   };
 
   const getFullPhoneNumber = (digits: string) => {
-    // Remove spaces and combine with country code
     const cleanDigits = digits.replace(/\s/g, "");
     return `${Config.COUNTRY_CODE}${cleanDigits}`;
   };
@@ -76,22 +72,17 @@ export default function LoginScreen() {
     try {
       const fullPhoneNumber = getFullPhoneNumber(phoneNumber);
       const formattedPhone = authService.formatPhoneForAPI(fullPhoneNumber);
-
       console.log("🔧 [LOGIN] Checking if user exists:", formattedPhone);
 
-      // First try to send registration OTP to see if user already exists
       const registerResponse = await authService.sendRegisterOTP(
         formattedPhone
       );
-
       console.log("🔧 [LOGIN] Register OTP response:", registerResponse);
 
       if (registerResponse.success) {
-        // Registration OTP sent successfully - user doesn't exist
         console.log("ℹ️ [LOGIN] User doesn't exist, registration OTP sent");
         return false;
       } else {
-        // Check if error indicates user already exists
         if (
           registerResponse.message &&
           (registerResponse.message
@@ -99,20 +90,16 @@ export default function LoginScreen() {
             .includes("already registered") ||
             registerResponse.message.toLowerCase().includes("already exists"))
         ) {
-          // User already exists - try login OTP
           console.log("ℹ️ [LOGIN] User already exists, trying login OTP");
           const loginResponse = await authService.sendLoginOTP(formattedPhone);
-
           if (loginResponse.success) {
             console.log("✅ [LOGIN] Login OTP sent successfully");
             return true;
           } else {
             console.log("⚠️ [LOGIN] Login OTP failed:", loginResponse.message);
-            // Still assume user exists since register said they're already registered
             return true;
           }
         } else {
-          // Other registration error - try login as fallback
           console.log(
             "⚠️ [LOGIN] Registration failed with other error, trying login"
           );
@@ -122,13 +109,11 @@ export default function LoginScreen() {
       }
     } catch (error) {
       console.error("❌ [LOGIN] Error checking user registration:", error);
-      // On network error, default to login attempt
       return true;
     }
   };
 
   const handlePhoneSubmit = async () => {
-    // Check for exactly configured length
     const cleaned = phoneNumber.replace(/\D/g, "");
     if (cleaned.length !== Config.PHONE_NUMBER_LENGTH) {
       Alert.alert(
@@ -138,17 +123,14 @@ export default function LoginScreen() {
       return;
     }
 
-    // Check if user is registered and handle OTP sending
     const isRegistered = await checkUserRegistration(phoneNumber);
     setIsUserRegistered(isRegistered);
 
     if (isRegistered) {
-      // Existing user - OTP already sent in checkUserRegistration
       console.log("✅ [LOGIN] User exists, proceeding to OTP verification");
       setStep("otp");
       startCountdown();
     } else {
-      // New user - show registration fields first, OTP will be sent after name entry
       console.log("ℹ️ [LOGIN] New user, showing registration form");
       setStep("register");
     }
@@ -158,26 +140,21 @@ export default function LoginScreen() {
     name: string
   ): { isValid: boolean; message?: string } => {
     const trimmedName = name.trim();
-
     if (!trimmedName) {
       return { isValid: false, message: "Please enter your full name." };
     }
-
     if (trimmedName.length < 2) {
       return {
         isValid: false,
         message: "Name must be at least 2 characters long.",
       };
     }
-
     if (trimmedName.length > 50) {
       return {
         isValid: false,
         message: "Name must be less than 50 characters.",
       };
     }
-
-    // Check for valid characters (letters, spaces, common name characters)
     const nameRegex = /^[a-zA-Z\s\-\.\']+$/;
     if (!nameRegex.test(trimmedName)) {
       return {
@@ -186,8 +163,6 @@ export default function LoginScreen() {
           "Name can only contain letters, spaces, hyphens, dots, and apostrophes.",
       };
     }
-
-    // Check for reasonable word count (2-4 names)
     const nameParts = trimmedName
       .split(/\s+/)
       .filter((part) => part.length > 0);
@@ -197,24 +172,45 @@ export default function LoginScreen() {
         message: "Please enter a shorter name (maximum 4 words).",
       };
     }
-
     return { isValid: true };
+  };
+
+  const handleServiceToggle = (serviceId: string) => {
+    setSelectedServices((prev) => {
+      if (prev.includes(serviceId)) {
+        // Remove service
+        return prev.filter((id) => id !== serviceId);
+      } else {
+        // Add service (max 3)
+        if (prev.length >= 3) {
+          Alert.alert("Limit Reached", "You can select maximum 3 services.");
+          return prev;
+        }
+        return [...prev, serviceId];
+      }
+    });
   };
 
   const handleRegisterSubmit = async () => {
     const validation = validateName(fullName);
-
     if (!validation.isValid) {
       Alert.alert("Invalid Name", validation.message);
       return;
     }
 
-    // Registration OTP was already sent in checkUserRegistration
-    // Just proceed to OTP verification step
+    if (selectedServices.length === 0) {
+      Alert.alert(
+        "Service Required",
+        "Please select at least one service category."
+      );
+      return;
+    }
+
     console.log(
       "✅ [REGISTER] Proceeding to OTP verification with name:",
       fullName.trim()
     );
+    console.log("✅ [REGISTER] Selected services:", selectedServices);
     setStep("otp");
     startCountdown();
   };
@@ -237,12 +233,10 @@ export default function LoginScreen() {
     newOtp[index] = text;
     setOtp(newOtp);
 
-    // Auto-focus next input
     if (text && index < Config.OTP_LENGTH - 1) {
       otpRefs.current[index + 1]?.focus();
     }
 
-    // Auto-submit when all digits are entered
     if (
       newOtp.every((digit) => digit !== "") &&
       newOtp.join("").length === Config.OTP_LENGTH
@@ -257,13 +251,10 @@ export default function LoginScreen() {
     }
   };
 
-  // utils/navigationHelpers.ts (or inside same file above handleLogin if small project)
   const navigateHandler = (router: any, returnTo?: any, returnParams?: any) => {
     if (returnTo && returnParams) {
       console.log("✅ [AUTH] Redirecting back to service page");
-
       const params = JSON.parse(returnParams);
-
       router.replace({
         pathname: "/offline-service/[id]",
         params: {
@@ -297,7 +288,6 @@ export default function LoginScreen() {
     try {
       const fullPhoneNumber = getFullPhoneNumber(phoneNumber);
       const formattedPhone = authService.formatPhoneForAPI(fullPhoneNumber);
-
       let response;
       if (isUserRegistered) {
         console.log("🔧 [LOGIN] Verifying login OTP:", formattedPhone);
@@ -315,12 +305,16 @@ export default function LoginScreen() {
         console.log(
           `🔧 [REGISTER] Name split - First: "${firstName}", Last: "${lastName}"`
         );
+        console.log(
+          `🔧 [REGISTER] Selected services: ${JSON.stringify(selectedServices)}`
+        );
 
         response = await authService.verifyRegisterOTP(
           formattedPhone,
           otpToUse,
           firstName,
-          lastName
+          lastName,
+          selectedServices // Pass selected services to API
         );
       }
 
@@ -339,12 +333,8 @@ export default function LoginScreen() {
           isVerified: response.data.user.isPhoneVerified || true,
         };
 
-        // Store user data in SecureStore
         await SecureStore.setItemAsync("user", JSON.stringify(userData));
-
-        // Refresh auth state to update context
         await refreshAuthState();
-
         navigateHandler(router, returnTo, returnParams);
       } else {
         Alert.alert("Verification Failed", response.message || "Invalid OTP");
@@ -359,19 +349,15 @@ export default function LoginScreen() {
 
   const handleResendOTP = async () => {
     if (countdown > 0) return;
-
     try {
       const fullPhoneNumber = getFullPhoneNumber(phoneNumber);
       const formattedPhone = authService.formatPhoneForAPI(fullPhoneNumber);
-
       let response;
 
       if (isUserRegistered) {
-        // Resend login OTP
         console.log("🔧 [LOGIN] Resending login OTP:", formattedPhone);
         response = await authService.sendLoginOTP(formattedPhone);
       } else {
-        // Resend registration OTP
         console.log(
           "🔧 [REGISTER] Resending registration OTP:",
           formattedPhone
@@ -394,10 +380,9 @@ export default function LoginScreen() {
   const handleBackToPhone = () => {
     setStep("phone");
     setFullName("");
+    setSelectedServices([]);
     setIsUserRegistered(null);
   };
-
-  // Device back button is handled by useEffect above
 
   return (
     <>
@@ -413,7 +398,12 @@ export default function LoginScreen() {
         </View>
 
         {/* Content */}
-        <View style={styles.content}>
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.scrollContentContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {step === "phone" ? (
             <View>
               <TouchableOpacity
@@ -508,6 +498,57 @@ export default function LoginScreen() {
                   {Config.COUNTRY_CODE} {phoneNumber}
                 </Text>
               </View>
+              {/* ---- SERVICE CATEGORY SELECTOR ---- */}
+              <Text style={styles.serviceSelectorTitle}>
+                Select Your Services
+              </Text>
+              <Text style={styles.serviceSelectorSubtitle}>
+                Choose at least 1 (max 3)
+              </Text>
+              <View style={styles.serviceSelectorGrid}>
+                {SERVICE_CATEGORIES.map((service) => {
+                  const isSelected = (selectedServices || []).includes(
+                    service.id
+                  );
+                  return (
+                    <TouchableOpacity
+                      key={service.id}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        setSelectedServices((prev) => {
+                          if (isSelected) {
+                            return prev.filter((id) => id !== service.id);
+                          } else {
+                            if (prev.length >= 3) {
+                              Alert.alert(
+                                "Limit Reached",
+                                "You can select max 3 services."
+                              );
+                              return prev;
+                            }
+                            return [...prev, service.id];
+                          }
+                        });
+                      }}
+                      style={[
+                        styles.serviceSelectorOption,
+                        isSelected && styles.serviceSelectorOptionSelected,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.serviceSelectorOptionText,
+                          isSelected &&
+                            styles.serviceSelectorOptionTextSelected,
+                        ]}
+                      >
+                        {service.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {/* ---- END SELECTOR ---- */}
 
               {/* Show OTP fields if OTP has been sent */}
               {countdown > 0 && (
@@ -695,7 +736,7 @@ export default function LoginScreen() {
               </View>
             </View>
           )}
-        </View>
+        </ScrollView>
       </ThemedView>
     </>
   );
@@ -716,9 +757,14 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  scrollContentContainer: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.lg,
-    justifyContent: "flex-start",
+    flexGrow: 1,
   },
   backButton: {
     alignSelf: "flex-start",
@@ -896,5 +942,49 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontFamily: FontFamily.Montserrat,
     color: Colors.text,
+  },
+  serviceSelectorTitle: {
+    fontSize: 18,
+    fontFamily: FontFamily.MontserratBold,
+    color: Colors.primary,
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  serviceSelectorSubtitle: {
+    fontSize: 13,
+    fontFamily: FontFamily.Montserrat,
+    color: Colors.text,
+    opacity: 0.7,
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  serviceSelectorGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+    justifyContent: "center",
+  },
+  serviceSelectorOption: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    margin: 4,
+    backgroundColor: Colors.primary + "10",
+    borderWidth: 1,
+    borderColor: Colors.primary + "20",
+  },
+  serviceSelectorOptionSelected: {
+    backgroundColor: Colors.primary,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  serviceSelectorOptionText: {
+    color: Colors.primary,
+    fontFamily: FontFamily.Montserrat,
+  },
+  serviceSelectorOptionTextSelected: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });

@@ -68,7 +68,7 @@ export default function ProfileScreen() {
         const storedUser = await SecureStore.getItemAsync("user");
         const storedAuthToken = await SecureStore.getItemAsync("authToken");
         console.log(`🔍 [PROFILE] Stored user:`, storedUser);
-        console.log(`🔍 [PROFILE] Stored auth token:`, !!storedAuthToken);
+        console.log(`🔍 [PROFILE] Stored auth token:`, storedAuthToken);
       } catch (error) {
         console.error("Error checking storage:", error);
       }

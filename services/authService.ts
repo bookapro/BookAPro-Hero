@@ -185,12 +185,13 @@ class AuthService {
     otp: string,
     firstName: string,
     lastName: string,
+    serviceCategories: string[],
     email?: string
   ): Promise<APIResponse<AuthTokenResponse>> {
     const formattedPhone = this.formatPhoneForAPI(phone);
     console.log(`🔧 [AUTH] Verifying register OTP for: ${formattedPhone}`);
     const response = await this.makeRequest<AuthTokenResponse>(
-      "/api/auth/register/verify-otp",
+      "/api/auth/provider/register/verify-otp",
       "POST",
       {
         phone: formattedPhone,
@@ -198,6 +199,7 @@ class AuthService {
         firstName,
         lastName,
         email,
+        serviceCategories: JSON.stringify(serviceCategories), // Convert array to JSON string as per API requirement
       }
     );
 

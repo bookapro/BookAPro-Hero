@@ -15,6 +15,7 @@ import { IconSymbol } from "../ui/IconSymbol";
 
 export function StickyNavbar() {
   const router = useRouter();
+  const { user } = useAuth();
   const { currentLocation, errorMsg, loading, refetch } = useLocation();
   const { isAuthenticated } = useAuth();
 
@@ -60,14 +61,24 @@ export function StickyNavbar() {
   return (
     <View style={styles.container}>
       <View style={styles.leftSection}>
-        <Image
-          source={require("../../assets/images/logo.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <ThemedText style={[styles.heroName, Typography.title]}>
-          Sameer
-        </ThemedText>
+        {user ? (
+          <>
+            <Image
+              source={require("../../assets/images/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <ThemedText style={[styles.heroName, Typography.title]}>
+              {user?.firstName}
+            </ThemedText>
+          </>
+        ) : (
+          <Image
+            source={require("../../assets/images/noUserLogo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        )}
         <View style={styles.addressContainer}>
           <IconSymbol
             size={24}
