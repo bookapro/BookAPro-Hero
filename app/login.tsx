@@ -23,7 +23,7 @@ import {
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { isLoading, refreshAuthState } = useAuth();
+  const { refreshAuthState } = useAuth();
   const { returnTo, returnParams } = useLocalSearchParams();
 
   const [step, setStep] = useState<"phone" | "register" | "otp">("phone");
@@ -36,6 +36,7 @@ export default function LoginScreen() {
   );
   const [countdown, setCountdown] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const otpRefs = useRef<TextInput[]>([]);
 
@@ -114,12 +115,14 @@ export default function LoginScreen() {
   };
 
   const handlePhoneSubmit = async () => {
+    setIsLoading(true);
     const cleaned = phoneNumber.replace(/\D/g, "");
     if (cleaned.length !== Config.PHONE_NUMBER_LENGTH) {
       Alert.alert(
         "Invalid Phone",
         `Please enter a valid ${Config.PHONE_NUMBER_LENGTH}-digit mobile number.`
       );
+      setIsLoading(false);
       return;
     }
 
@@ -128,10 +131,12 @@ export default function LoginScreen() {
 
     if (isRegistered) {
       console.log("✅ [LOGIN] User exists, proceeding to OTP verification");
+      setIsLoading(false);
       setStep("otp");
       startCountdown();
     } else {
       console.log("ℹ️ [LOGIN] New user, showing registration form");
+      setIsLoading(false);
       setStep("register");
     }
   };
@@ -192,9 +197,11 @@ export default function LoginScreen() {
   };
 
   const handleRegisterSubmit = async () => {
+    setIsLoading(true);
     const validation = validateName(fullName);
     if (!validation.isValid) {
       Alert.alert("Invalid Name", validation.message);
+      setIsLoading(false);
       return;
     }
 
@@ -203,6 +210,7 @@ export default function LoginScreen() {
         "Service Required",
         "Please select at least one service category."
       );
+      setIsLoading(false);
       return;
     }
 
@@ -211,6 +219,7 @@ export default function LoginScreen() {
       fullName.trim()
     );
     console.log("✅ [REGISTER] Selected services:", selectedServices);
+    setIsLoading(false);
     setStep("otp");
     startCountdown();
   };
