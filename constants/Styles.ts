@@ -19,7 +19,6 @@ export const Colors = {
   greyColor: "grey",
   blackTintLight: "rgba(0, 0, 0, 0.02)",
   black: "#000000",
-  // success: "#2ecc71",
   success: "#1abc9c",
 };
 

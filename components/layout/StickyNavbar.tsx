@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   StyleSheet,
   TouchableOpacity,
@@ -23,7 +24,6 @@ export function StickyNavbar() {
     if (!currentLocation?.address) {
       refetch();
     }
-    console.log("HAHA");
   };
 
   const handleProfilePress = () => {
@@ -36,7 +36,24 @@ export function StickyNavbar() {
 
   const handleProfileLongPress = () => {
     // if (isAuthenticated) {
-    toggleDutyStatus();
+    const newStatus = !isOnDuty;
+    const statusText = newStatus ? "ON DUTY" : "OFF DUTY";
+
+    Alert.alert(
+      "Change Duty Status",
+      `Are you sure you want to go ${statusText}?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: `Go ${statusText}`,
+          style: "default",
+          onPress: () => toggleDutyStatus(),
+        },
+      ]
+    );
     // } else {
     //   router.push("/login");
     // }
