@@ -1,5 +1,6 @@
 import { tokenService } from "@/services/tokenService";
 import { userService } from "@/services/userService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
@@ -19,6 +20,8 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isOnDuty: boolean;
+  toggleDutyStatus: () => void;
   logout: () => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<boolean>;
   refreshAuthState: () => Promise<void>;
@@ -36,15 +39,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const STORAGE_KEYS = {
   USER: "user",
   AUTH_TOKEN: "authToken",
+  DUTY_STATUS: "dutyStatus",
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasRealTokens, setHasRealTokens] = useState(false);
+  const [isOnDuty, setIsOnDuty] = useState(false);
 
   useEffect(() => {
     loadUserData();
+    loadDutyStatus();
   }, []);
 
   const loadUserData = async () => {
@@ -108,8 +114,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await tokenService.clearTokens();
       await SecureStore.deleteItemAsync(STORAGE_KEYS.USER);
       await SecureStore.deleteItemAsync(STORAGE_KEYS.AUTH_TOKEN);
+      await AsyncStorage.removeItem(STORAGE_KEYS.DUTY_STATUS);
       setUser(null);
       setHasRealTokens(false);
+      setIsOnDuty(false);
       console.log("✅ [AUTH] User logged out successfully");
     } catch (error) {
       console.error("❌ [AUTH] Error logging out:", error);
@@ -118,6 +126,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAuthState = async (): Promise<void> => {
     await loadUserData();
+  };
+
+  const loadDutyStatus = async (): Promise<void> => {
+    try {
+      const savedDutyStatus = await AsyncStorage.getItem(
+        STORAGE_KEYS.DUTY_STATUS
+      );
+      if (savedDutyStatus !== null) {
+        setIsOnDuty(JSON.parse(savedDutyStatus));
+      }
+    } catch (error) {
+      console.error("❌ [AUTH] Error loading duty status:", error);
+    }
+  };
+
+  const toggleDutyStatus = async (): Promise<void> => {
+    try {
+      const newDutyStatus = !isOnDuty;
+      setIsOnDuty(newDutyStatus);
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.DUTY_STATUS,
+        JSON.stringify(newDutyStatus)
+      );
+      console.log(
+        `✅ [AUTH] Duty status changed to: ${
+          newDutyStatus ? "ON DUTY" : "OFF DUTY"
+        }`
+      );
+    } catch (error) {
+      console.error("❌ [AUTH] Error toggling duty status:", error);
+    }
   };
 
   const fetchUserProfile = async (): Promise<void> => {
@@ -156,6 +195,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user || hasRealTokens,
+        isOnDuty,
+        toggleDutyStatus,
         logout,
         updateProfile,
         refreshAuthState,

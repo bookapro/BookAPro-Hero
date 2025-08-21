@@ -7,7 +7,6 @@ const cardWidth = (screenWidth - cardMargin * (numColumns + 1)) / numColumns;
 const cardHeight = cardWidth * 1;
 
 export const Colors = {
-  // primary: "#2563EB",
   primary: "#6a2e95",
   secondary: "#3B82F6",
   accent: "#60A5FA",
@@ -20,7 +19,8 @@ export const Colors = {
   greyColor: "grey",
   blackTintLight: "rgba(0, 0, 0, 0.02)",
   black: "#000000",
-  success: "#10B981",
+  // success: "#2ecc71",
+  success: "#1abc9c",
 };
 
 export const Spacing = {

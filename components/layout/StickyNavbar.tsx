@@ -15,9 +15,8 @@ import { IconSymbol } from "../ui/IconSymbol";
 
 export function StickyNavbar() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { currentLocation, errorMsg, loading, refetch } = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated, toggleDutyStatus, isOnDuty } = useAuth();
+  const { currentLocation, loading, refetch } = useLocation();
 
   const handleLocationPress = () => {
     // If address missing, try to get it again
@@ -33,6 +32,14 @@ export function StickyNavbar() {
     } else {
       router.push("/login");
     }
+  };
+
+  const handleProfileLongPress = () => {
+    // if (isAuthenticated) {
+    toggleDutyStatus();
+    // } else {
+    //   router.push("/login");
+    // }
   };
 
   let locationContent;
@@ -93,9 +100,17 @@ export function StickyNavbar() {
           )}
         </View>
       </View>
-      <TouchableOpacity onPress={handleProfilePress}>
+      <TouchableOpacity
+        onPress={handleProfilePress}
+        onLongPress={handleProfileLongPress}
+        delayLongPress={1500}
+      >
         <Image
-          source={require("../../assets/images/profile.png")}
+          source={
+            isOnDuty
+              ? require("../../assets/images/profileOnline.png")
+              : require("../../assets/images/profile.png")
+          }
           style={styles.profile}
         />
       </TouchableOpacity>
@@ -137,7 +152,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
   },
   profile: {
-    width: 40,
-    height: 40,
+    width: 50,
+    height: 50,
   },
 });
