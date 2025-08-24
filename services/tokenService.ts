@@ -194,16 +194,19 @@ class TokenService {
       }
 
       const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
-      const response = await fetch(`${API_BASE_URL}/api/auth/validate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify({
-          token: this.tokenData.accessToken,
-        }),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/auth/validate/provider`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({
+            token: this.tokenData.accessToken,
+          }),
+        }
+      );
 
       return response.ok;
     } catch (error) {
@@ -218,16 +221,19 @@ class TokenService {
 
       const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
-      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify({
-          refreshToken: this.tokenData?.refreshToken,
-        }),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/auth/provider/refresh`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({
+            refreshToken: this.tokenData?.refreshToken,
+          }),
+        }
+      );
 
       if (!response.ok) {
         console.log("❌ [TOKEN] Token refresh failed:", response.status);
