@@ -4,10 +4,10 @@ import { StickyNavbar } from "@/components/layout/StickyNavbar";
 import { Colors, FontFamily } from "@/constants/Styles";
 import { useAuth } from "@/contexts/AuthContext";
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 export default function HomeScreen() {
-  const { isOnDuty, toggleDutyStatus } = useAuth();
+  const { isOnDuty, isDutyStatusLoading } = useAuth();
 
   return (
     <ThemedView style={{ flex: 1 }}>
@@ -22,9 +22,20 @@ export default function HomeScreen() {
           },
         ]}
       >
-        <ThemedText style={styles.dutyStatusText}>
-          {isOnDuty ? "ON DUTY" : "OFF DUTY"}
-        </ThemedText>
+        {isDutyStatusLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator
+              size="small"
+              color={Colors.whiteColor}
+              style={styles.loadingIndicator}
+            />
+            <ThemedText style={styles.dutyStatusText}>Updating...</ThemedText>
+          </View>
+        ) : (
+          <ThemedText style={styles.dutyStatusText}>
+            {isOnDuty ? "ON DUTY" : "OFF DUTY"}
+          </ThemedText>
+        )}
       </View>
     </ThemedView>
   );
@@ -45,5 +56,13 @@ const styles = StyleSheet.create({
     color: Colors.whiteColor,
     fontFamily: FontFamily.MontserratBold,
     fontSize: 14,
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingIndicator: {
+    marginRight: 8,
   },
 });

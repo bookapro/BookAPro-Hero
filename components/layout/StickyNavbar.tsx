@@ -16,7 +16,13 @@ import { IconSymbol } from "../ui/IconSymbol";
 
 export function StickyNavbar() {
   const router = useRouter();
-  const { user, isAuthenticated, toggleDutyStatus, isOnDuty } = useAuth();
+  const {
+    user,
+    isAuthenticated,
+    toggleDutyStatus,
+    isOnDuty,
+    isDutyStatusLoading,
+  } = useAuth();
   const { currentLocation, loading, refetch } = useLocation();
 
   const handleLocationPress = () => {
@@ -131,16 +137,27 @@ export function StickyNavbar() {
       <TouchableOpacity
         onPress={handleProfilePress}
         onLongPress={handleProfileLongPress}
-        delayLongPress={1500}
+        delayLongPress={1000}
+        disabled={isDutyStatusLoading}
       >
-        <Image
-          source={
-            isOnDuty
-              ? require("../../assets/images/profileOnline.png")
-              : require("../../assets/images/profile.png")
-          }
-          style={styles.profile}
-        />
+        <View style={styles.profileContainer}>
+          <Image
+            source={
+              isOnDuty
+                ? require("../../assets/images/profileOnline.png")
+                : require("../../assets/images/profile.png")
+            }
+            style={[
+              styles.profile,
+              isDutyStatusLoading && styles.profileLoading,
+            ]}
+          />
+          {isDutyStatusLoading && (
+            <View style={styles.profileLoadingOverlay}>
+              <ActivityIndicator size="small" color={Colors.whiteColor} />
+            </View>
+          )}
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -179,8 +196,27 @@ const styles = StyleSheet.create({
     height: 20,
     marginTop: Spacing.xl,
   },
+  profileContainer: {
+    position: "relative",
+    width: 50,
+    height: 50,
+  },
   profile: {
     width: 50,
     height: 50,
+  },
+  profileLoading: {
+    opacity: 0.6,
+  },
+  profileLoadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    borderRadius: 25,
   },
 });

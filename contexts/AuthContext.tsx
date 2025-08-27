@@ -22,6 +22,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isOnDuty: boolean;
+  isDutyStatusLoading: boolean;
   toggleDutyStatus: () => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<boolean>;
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasRealTokens, setHasRealTokens] = useState(false);
   const [isOnDuty, setIsOnDuty] = useState(false);
+  const [isDutyStatusLoading, setIsDutyStatusLoading] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -184,6 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const toggleDutyStatus = async (): Promise<void> => {
     try {
+      setIsDutyStatusLoading(true);
       const newDutyStatus = !isOnDuty;
       console.log(
         `🔄 [AUTH] Updating duty status to: ${
@@ -217,6 +220,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("❌ [AUTH] Error toggling duty status:", error);
       // Revert the UI state if API call failed
       // The state remains unchanged since we only update on success
+      throw error; // Re-throw to let the UI handle the error
+    } finally {
+      setIsDutyStatusLoading(false);
     }
   };
 
@@ -257,6 +263,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAuthenticated: !!user || hasRealTokens,
         isOnDuty,
+        isDutyStatusLoading,
         toggleDutyStatus,
         logout,
         updateProfile,
