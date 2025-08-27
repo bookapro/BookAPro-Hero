@@ -20,7 +20,7 @@ class APIService {
    */
   async makeAuthenticatedRequest<T>(
     endpoint: string,
-    method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
+    method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" = "GET",
     body?: any,
     additionalHeaders?: Record<string, string>
   ): Promise<APIResponse<T>> {
@@ -111,7 +111,7 @@ class APIService {
    */
   async makePublicRequest<T>(
     endpoint: string,
-    method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
+    method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" = "GET",
     body?: any,
     additionalHeaders?: Record<string, string>
   ): Promise<APIResponse<T>> {
@@ -208,6 +208,16 @@ class APIService {
     return authenticated
       ? this.makeAuthenticatedRequest<T>(endpoint, "DELETE")
       : this.makePublicRequest<T>(endpoint, "DELETE");
+  }
+
+  async patch<T>(
+    endpoint: string,
+    body?: any,
+    authenticated = true
+  ): Promise<APIResponse<T>> {
+    return authenticated
+      ? this.makeAuthenticatedRequest<T>(endpoint, "PATCH", body)
+      : this.makePublicRequest<T>(endpoint, "PATCH", body);
   }
 }
 

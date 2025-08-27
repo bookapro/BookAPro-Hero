@@ -1,3 +1,4 @@
+import { providerService } from "@/services/providerService";
 import { tokenService } from "@/services/tokenService";
 import { userService } from "@/services/userService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -21,11 +22,12 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isOnDuty: boolean;
-  toggleDutyStatus: () => void;
+  toggleDutyStatus: () => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<boolean>;
   refreshAuthState: () => Promise<void>;
   fetchUserProfile: () => Promise<void>;
+  refreshDutyStatus: () => Promise<void>;
 }
 
 export interface RegisterData {
@@ -50,7 +52,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     loadUserData();
-    loadDutyStatus();
   }, []);
 
   const loadUserData = async () => {
@@ -69,11 +70,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else {
             await fetchUserProfile();
           }
+          // Load duty status after authentication is confirmed
+          await loadDutyStatus();
         } else {
           const refreshed = await tokenService.refreshAccessToken();
           if (refreshed) {
             setHasRealTokens(true);
             await fetchUserProfile();
+            // Load duty status after token refresh
+            await loadDutyStatus();
           } else {
             await tokenService.clearTokens();
             await SecureStore.deleteItemAsync(STORAGE_KEYS.USER);
@@ -128,13 +133,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await loadUserData();
   };
 
+  const refreshDutyStatus = async (): Promise<void> => {
+    await loadDutyStatus();
+  };
+
   const loadDutyStatus = async (): Promise<void> => {
     try {
+      // First try to get from API if authenticated
+      if (hasRealTokens) {
+        console.log("🔄 [AUTH] Fetching duty status from API...");
+        const statusResponse = await providerService.getStatus();
+
+        if (statusResponse.success && statusResponse.data) {
+          const apiDutyStatus = statusResponse.data.onDuty;
+          setIsOnDuty(apiDutyStatus);
+          // Update local storage with API data
+          await AsyncStorage.setItem(
+            STORAGE_KEYS.DUTY_STATUS,
+            JSON.stringify(apiDutyStatus)
+          );
+          console.log(
+            `✅ [AUTH] Duty status loaded from API: ${
+              apiDutyStatus ? "ON DUTY" : "OFF DUTY"
+            }`
+          );
+          return;
+        } else {
+          console.log(
+            "⚠️ [AUTH] Failed to fetch duty status from API, using local storage"
+          );
+        }
+      }
+
+      // Fallback to local storage
       const savedDutyStatus = await AsyncStorage.getItem(
         STORAGE_KEYS.DUTY_STATUS
       );
       if (savedDutyStatus !== null) {
         setIsOnDuty(JSON.parse(savedDutyStatus));
+        console.log(
+          `✅ [AUTH] Duty status loaded from storage: ${
+            JSON.parse(savedDutyStatus) ? "ON DUTY" : "OFF DUTY"
+          }`
+        );
       }
     } catch (error) {
       console.error("❌ [AUTH] Error loading duty status:", error);
@@ -144,18 +185,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const toggleDutyStatus = async (): Promise<void> => {
     try {
       const newDutyStatus = !isOnDuty;
-      setIsOnDuty(newDutyStatus);
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.DUTY_STATUS,
-        JSON.stringify(newDutyStatus)
-      );
       console.log(
-        `✅ [AUTH] Duty status changed to: ${
+        `🔄 [AUTH] Updating duty status to: ${
           newDutyStatus ? "ON DUTY" : "OFF DUTY"
         }`
       );
+
+      // Update duty status via API
+      const response = await providerService.updateDutyStatus(newDutyStatus);
+
+      if (response.success) {
+        setIsOnDuty(newDutyStatus);
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.DUTY_STATUS,
+          JSON.stringify(newDutyStatus)
+        );
+        console.log(
+          `✅ [AUTH] Duty status successfully changed to: ${
+            newDutyStatus ? "ON DUTY" : "OFF DUTY"
+          }`
+        );
+      } else {
+        console.error(
+          "❌ [AUTH] Failed to update duty status:",
+          response.message
+        );
+        // Optionally show an alert to the user
+        throw new Error(response.message);
+      }
     } catch (error) {
       console.error("❌ [AUTH] Error toggling duty status:", error);
+      // Revert the UI state if API call failed
+      // The state remains unchanged since we only update on success
     }
   };
 
@@ -201,6 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updateProfile,
         refreshAuthState,
         fetchUserProfile,
+        refreshDutyStatus,
       }}
     >
       {children}

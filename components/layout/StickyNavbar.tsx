@@ -35,7 +35,11 @@ export function StickyNavbar() {
   };
 
   const handleProfileLongPress = () => {
-    // if (isAuthenticated) {
+    if (!isAuthenticated) {
+      router.push("/login");
+      return;
+    }
+
     const newStatus = !isOnDuty;
     const statusText = newStatus ? "ON DUTY" : "OFF DUTY";
 
@@ -50,13 +54,20 @@ export function StickyNavbar() {
         {
           text: `Go ${statusText}`,
           style: "default",
-          onPress: () => toggleDutyStatus(),
+          onPress: async () => {
+            try {
+              await toggleDutyStatus();
+            } catch (error) {
+              Alert.alert(
+                "Error",
+                "Failed to update duty status. Please try again.",
+                [{ text: "OK" }]
+              );
+            }
+          },
         },
       ]
     );
-    // } else {
-    //   router.push("/login");
-    // }
   };
 
   let locationContent;
