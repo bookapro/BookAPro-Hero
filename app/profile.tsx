@@ -55,7 +55,8 @@ const userSettings = [
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, isOnDuty, canLogout } =
+    useAuth();
 
   // Debug authentication state
   console.log(`🔍 [PROFILE] isAuthenticated: ${isAuthenticated}`);
@@ -77,6 +78,29 @@ export default function ProfileScreen() {
   }, []);
 
   const handleLogout = () => {
+    // Check if user is on duty
+    if (!canLogout()) {
+      Alert.alert(
+        "Cannot Logout",
+        "You are currently on duty. Please go off duty before logging out.",
+        [
+          {
+            text: "OK",
+            style: "default",
+          },
+          {
+            text: "Go Off Duty",
+            style: "destructive",
+            onPress: () => {
+              // Navigate back to home screen where they can toggle duty status
+              router.replace("/(tabs)");
+            },
+          },
+        ]
+      );
+      return;
+    }
+
     Alert.alert("Logout", "Are you sure you want to logout?", [
       {
         text: "Cancel",
@@ -86,8 +110,18 @@ export default function ProfileScreen() {
         text: "Logout",
         style: "destructive",
         onPress: async () => {
-          await logout();
-          router.replace("/(tabs)");
+          try {
+            await logout();
+            router.replace("/(tabs)");
+          } catch (error) {
+            Alert.alert(
+              "Logout Failed",
+              error instanceof Error
+                ? error.message
+                : "An error occurred during logout",
+              [{ text: "OK" }]
+            );
+          }
         },
       },
     ]);
@@ -197,9 +231,26 @@ export default function ProfileScreen() {
             ))}
           </View>
 
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <IconSymbol size={24} name="logout" color={Colors.error} />
-            <ThemedText style={styles.logoutText}>Logout</ThemedText>
+          <TouchableOpacity
+            style={[
+              styles.logoutButton,
+              !canLogout() && styles.logoutButtonDisabled,
+            ]}
+            onPress={handleLogout}
+          >
+            <IconSymbol
+              size={24}
+              name="logout"
+              color={canLogout() ? Colors.error : Colors.greyColor}
+            />
+            <ThemedText
+              style={[
+                styles.logoutText,
+                !canLogout() && styles.logoutTextDisabled,
+              ]}
+            >
+              {canLogout() ? "Logout" : "Logout (Go Off Duty First)"}
+            </ThemedText>
           </TouchableOpacity>
         </ScrollView>
       </ThemedView>
@@ -371,10 +422,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(239, 68, 68, 0.2)",
   },
+  logoutButtonDisabled: {
+    backgroundColor: "rgba(128, 128, 128, 0.1)",
+    borderColor: "rgba(128, 128, 128, 0.2)",
+  },
   logoutText: {
     color: Colors.error,
     fontSize: 16,
     fontWeight: "600",
+  },
+  logoutTextDisabled: {
+    color: Colors.greyColor,
   },
   scrollView: {
     flex: 1,

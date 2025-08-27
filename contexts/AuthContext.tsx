@@ -25,6 +25,7 @@ interface AuthContextType {
   isDutyStatusLoading: boolean;
   toggleDutyStatus: () => Promise<void>;
   logout: () => Promise<void>;
+  canLogout: () => boolean;
   updateProfile: (userData: Partial<User>) => Promise<boolean>;
   refreshAuthState: () => Promise<void>;
   fetchUserProfile: () => Promise<void>;
@@ -115,8 +116,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const canLogout = (): boolean => {
+    return !isOnDuty;
+  };
+
   const logout = async (): Promise<void> => {
     try {
+      // Check if user is on duty before allowing logout
+      if (isOnDuty) {
+        throw new Error(
+          "Cannot logout while on duty. Please go off duty first."
+        );
+      }
+
       console.log("🔄 [AUTH] Logging out user...");
       await tokenService.clearTokens();
       await SecureStore.deleteItemAsync(STORAGE_KEYS.USER);
@@ -128,6 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("✅ [AUTH] User logged out successfully");
     } catch (error) {
       console.error("❌ [AUTH] Error logging out:", error);
+      throw error; // Re-throw to let UI handle the error
     }
   };
 
@@ -266,6 +279,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isDutyStatusLoading,
         toggleDutyStatus,
         logout,
+        canLogout,
         updateProfile,
         refreshAuthState,
         fetchUserProfile,
