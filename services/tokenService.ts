@@ -108,8 +108,8 @@ class TokenService {
       return false;
     }
 
-    // Check if token expires in next 60 seconds (buffer time)
-    const bufferTime = 60 * 1000; // 60 seconds
+    // Check if token expires in next 2 minutes (buffer time for proactive refresh)
+    const bufferTime = 2 * 60 * 1000; // 2 minutes
     return Date.now() < this.tokenData.expiresAt - bufferTime;
   }
 
@@ -215,9 +215,15 @@ class TokenService {
     }
   }
 
-  private async performTokenRefresh(): Promise<boolean> {
+  private async performTokenRefresh(retryCount = 0): Promise<boolean> {
+    const maxRetries = 2;
+
     try {
-      console.log("🔄 [TOKEN] Refreshing access token...");
+      console.log(
+        `🔄 [TOKEN] Refreshing access token... (attempt ${retryCount + 1}/${
+          maxRetries + 1
+        })`
+      );
 
       const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -247,25 +253,90 @@ class TokenService {
           return false;
         }
 
+        // If refresh token is invalid (401/403), clear tokens and require login
+        if (response.status === 401 || response.status === 403) {
+          console.log(
+            "❌ [TOKEN] Refresh token expired or invalid, clearing tokens"
+          );
+          await this.clearTokens();
+          return false;
+        }
+
+        // For server errors (5xx), retry if we haven't exceeded max retries
+        if (response.status >= 500 && retryCount < maxRetries) {
+          console.log(
+            `⚠️ [TOKEN] Server error, retrying in ${
+              (retryCount + 1) * 1000
+            }ms...`
+          );
+          await new Promise((resolve) =>
+            setTimeout(resolve, (retryCount + 1) * 1000)
+          );
+          return this.performTokenRefresh(retryCount + 1);
+        }
+
         // For other errors, clear invalid tokens
+        console.log("❌ [TOKEN] Unrecoverable refresh error, clearing tokens");
         await this.clearTokens();
         return false;
       }
 
-      const data = await response.json();
+      const responseText = await response.text();
+      let data;
 
-      if (data.success && data.data) {
-        await this.storeTokens(data.data);
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error(
+          "❌ [TOKEN] Failed to parse refresh response:",
+          parseError
+        );
+        if (retryCount < maxRetries) {
+          console.log("⚠️ [TOKEN] Parse error, retrying...");
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          return this.performTokenRefresh(retryCount + 1);
+        }
+        await this.clearTokens();
+        return false;
+      }
+
+      if (data.success && data.accessToken && data.refreshToken) {
+        // API returns token data directly in response, not nested under 'data'
+        const tokenData: TokenData = {
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          expiresIn: data.expiresIn,
+          tokenType: data.tokenType,
+        };
+
+        await this.storeTokens(tokenData);
         console.log("✅ [TOKEN] Access token refreshed successfully");
         return true;
       }
 
-      console.log("❌ [TOKEN] Invalid refresh response");
+      console.log("❌ [TOKEN] Invalid refresh response format:", data);
       await this.clearTokens();
       return false;
     } catch (error) {
-      console.error("❌ [TOKEN] Error refreshing token:", error);
-      await this.clearTokens();
+      console.error("❌ [TOKEN] Network error refreshing token:", error);
+
+      // Retry on network errors
+      if (retryCount < maxRetries) {
+        console.log(
+          `⚠️ [TOKEN] Network error, retrying in ${
+            (retryCount + 1) * 1000
+          }ms...`
+        );
+        await new Promise((resolve) =>
+          setTimeout(resolve, (retryCount + 1) * 1000)
+        );
+        return this.performTokenRefresh(retryCount + 1);
+      }
+
+      // Don't clear tokens on network errors - user might be offline
+      console.log(
+        "❌ [TOKEN] Max retries exceeded, keeping current tokens for offline use"
+      );
       return false;
     }
   }

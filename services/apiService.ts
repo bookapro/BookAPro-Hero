@@ -61,13 +61,29 @@ class APIService {
             additionalHeaders
           );
         } else {
-          // Refresh failed - user needs to login again
-          await tokenService.clearTokens();
-          return {
-            success: false,
-            message: "Authentication expired. Please login again.",
-            error: "TOKEN_EXPIRED",
-          };
+          // Check if we still have a usable token (network issues vs expired token)
+          const isAuthenticated = await tokenService.isAuthenticated();
+          if (isAuthenticated) {
+            console.log(
+              "⚠️ [API] Refresh failed but token still usable, continuing with current token"
+            );
+            // Don't clear tokens - might be a network issue
+            return {
+              success: false,
+              message:
+                "Network error during authentication refresh. Please try again.",
+              error: "REFRESH_NETWORK_ERROR",
+            };
+          } else {
+            // Tokens are truly expired - user needs to login again
+            console.log("❌ [API] Authentication expired, clearing tokens");
+            await tokenService.clearTokens();
+            return {
+              success: false,
+              message: "Your session has expired. Please login again.",
+              error: "TOKEN_EXPIRED",
+            };
+          }
         }
       }
 

@@ -30,6 +30,7 @@ interface AuthContextType {
   refreshAuthState: () => Promise<void>;
   fetchUserProfile: () => Promise<void>;
   refreshDutyStatus: () => Promise<void>;
+  handleTokenExpiration: () => Promise<void>;
 }
 
 export interface RegisterData {
@@ -56,6 +57,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     loadUserData();
   }, []);
+
+  // Proactive token refresh - check every 5 minutes
+  useEffect(() => {
+    if (!hasRealTokens) return;
+
+    const tokenRefreshInterval = setInterval(async () => {
+      try {
+        const tokenInfo = tokenService.getTokenInfo();
+
+        // If token expires in less than 5 minutes, refresh it proactively
+        if (tokenInfo.expiresIn && tokenInfo.expiresIn < 5 * 60) {
+          console.log("🔄 [AUTH] Proactively refreshing token (expires soon)");
+          const refreshed = await tokenService.refreshAccessToken();
+
+          if (!refreshed) {
+            console.log(
+              "⚠️ [AUTH] Proactive refresh failed, user may need to re-login soon"
+            );
+          }
+        }
+      } catch (error) {
+        console.error("❌ [AUTH] Error in proactive token refresh:", error);
+      }
+    }, 5 * 60 * 1000); // Check every 5 minutes
+
+    return () => clearInterval(tokenRefreshInterval);
+  }, [hasRealTokens]);
 
   const loadUserData = async () => {
     try {
@@ -150,6 +178,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshDutyStatus = async (): Promise<void> => {
     await loadDutyStatus();
+  };
+
+  const handleTokenExpiration = async (): Promise<void> => {
+    console.log("🔄 [AUTH] Handling token expiration...");
+
+    // Try to refresh tokens first
+    const refreshed = await tokenService.refreshAccessToken();
+
+    if (!refreshed) {
+      // If refresh failed, clear auth state and redirect to login
+      console.log("❌ [AUTH] Token refresh failed, logging out user");
+      await logout();
+    } else {
+      console.log("✅ [AUTH] Token refreshed successfully");
+      // Optionally refresh user data
+      await fetchUserProfile();
+    }
   };
 
   const loadDutyStatus = async (): Promise<void> => {
@@ -284,6 +329,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         refreshAuthState,
         fetchUserProfile,
         refreshDutyStatus,
+        handleTokenExpiration,
       }}
     >
       {children}
