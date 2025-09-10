@@ -4,7 +4,6 @@ import { Colors, FontFamily, Spacing } from "@/constants/Styles";
 import React, { useState } from "react";
 import {
   Alert,
-  Dimensions,
   Modal,
   ScrollView,
   StyleSheet,
@@ -12,8 +11,6 @@ import {
   View,
 } from "react-native";
 import { Calendar } from "react-native-calendars";
-
-const { width } = Dimensions.get("window");
 
 // ============================================================================
 // TYPES AND INTERFACES - SCHEDULE ONLY

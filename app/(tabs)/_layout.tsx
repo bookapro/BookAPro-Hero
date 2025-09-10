@@ -4,34 +4,24 @@ import React from "react";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { Colors, FontFamily } from "@/constants/Styles";
-import { Dimensions } from "react-native";
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof IconSymbol>["name"];
   color: string;
 }) {
   const isActive = props.color === Colors.primary;
-  const { height } = Dimensions.get("window");
-  const responsiveMargin = -height * 0.03; // 3% of screen height
   if (!isActive) {
     return (
       <IconSymbol
         size={24}
         style={{
-          marginBottom: responsiveMargin,
           opacity: 0.5,
         }}
         {...props}
       />
     );
   }
-  return (
-    <IconSymbol
-      size={28}
-      style={{ marginBottom: responsiveMargin }}
-      {...props}
-    />
-  );
+  return <IconSymbol size={28} {...props} />;
 }
 
 export default function TabLayout() {
@@ -45,11 +35,12 @@ export default function TabLayout() {
           fontFamily: FontFamily.MontserratBold,
         },
         tabBarStyle: {
-          minHeight: 75,
+          minHeight: 125,
         },
         tabBarItemStyle: {
-          paddingVertical: 0,
-          gap: 0,
+          paddingVertical: 4,
+          gap: 4,
+          paddingTop: 14,
         },
       }}
     >

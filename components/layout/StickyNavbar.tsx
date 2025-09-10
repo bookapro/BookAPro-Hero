@@ -124,7 +124,7 @@ export function StickyNavbar() {
           <IconSymbol
             size={24}
             style={{ marginLeft: -6 }}
-            name="location-on"
+            name="location-pin"
             color={Colors.whiteColor}
           />
           {loading ? (
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   addressContainer: {
     flexDirection: "row",
     gap: Spacing.xs,
-    marginTop: Spacing.xl,
+    marginTop: Spacing.sm,
   },
   logo: {
     width: 100,

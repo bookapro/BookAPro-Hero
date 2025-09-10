@@ -1,10 +1,4 @@
-import { Dimensions, StyleSheet } from "react-native";
-
-const screenWidth = Dimensions.get("window").width;
-const cardMargin = 12;
-const numColumns = 2;
-const cardWidth = (screenWidth - cardMargin * (numColumns + 1)) / numColumns;
-const cardHeight = cardWidth * 1;
+import { StyleSheet } from "react-native";
 
 export const Colors = {
   primary: "#6a2e95",
@@ -61,16 +55,5 @@ export const Layout = StyleSheet.create({
   container: {
     flex: 1,
     gap: Spacing.md,
-  },
-  section: {
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  serviceCard: {
-    width: cardWidth,
-    height: cardHeight,
-    borderRadius: 12,
-    marginBottom: Spacing.md,
-    backgroundColor: Colors.whiteColor,
   },
 });
